@@ -78,6 +78,27 @@ def calculate_speed_in_kmps(feature_distance, GSD, time_difference): # divides t
     speed = distance / time_difference
     return speed
 
+def validate_matching_coordinates(image_1, image_2, coordinates_1, coordinates_2, sensitivity):
+    img1 = pilimg.open(image_1)
+    img2 = pilimg.open(image_2)
+
+    res_1 = []
+    res_2 = []
+    
+    diff_thr = sensitivity
+    for i in range(len(coordinates_1)):
+        c_1 = img1.getpixel((coordinates_1[i][0],coordinates_1[i][1]))
+        c_2 = img2.getpixel((coordinates_2[i][0],coordinates_2[i][1]))
+        
+        diff = 0
+        for j in range(3):
+            diff += abs(c_1[j]-c_2[j])
+        
+        if(diff <= diff_thr):
+            res_1.append(coordinates_1[i])
+            res_2.append(coordinates_2[i])
+    return res_1, res_2
+    
 
 image_1 = 'photo_07464.jpg'
 image_2 = 'photo_07465.jpg'
@@ -227,6 +248,12 @@ speed = calculate_speed_in_kmps(average_feature_distance, 12648, time_difference
 print(speed)
 
 
+validated_coordinates_1, validated_coordinates_2 = validate_matching_coordinates(image_1, image_2, coordinates_1, coordinates_2, 50)
+average_feature_distance = calculate_mean_distance(validated_coordinates_1, validated_coordinates_2)
+speed = calculate_speed_in_kmps(average_feature_distance, 12648, time_difference)
+
+
+print(str(len(validated_coordinates_1)) + "/"+str(len(coordinates_1))+" coordinates validated. New speed: " + str(speed))
 
 # uhhhhhhhhhhhhhhhhhhhhh.....
 
