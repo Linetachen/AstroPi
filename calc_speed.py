@@ -4,6 +4,7 @@ from datetime import datetime
 import cv2
 import math
 import time
+from PIL import Image as pilimg
 
 start_time = time.time()
 def get_time(image):
@@ -99,14 +100,18 @@ def validate_matching_coordinates(image_1, image_2, coordinates_1, coordinates_2
             res_2.append(coordinates_2[i])
     return res_1, res_2
     
+    
 
-image_1 = 'photo_07464.jpg'
-image_2 = 'photo_07465.jpg'
+
+#image_1 = 'photo_07464.jpg'
+#image_2 = 'photo_07465.jpg'
 #speed = 7.255443210895204
+#new_speed = 6.212950503281697
 
-#image_1 = 'photo_07004.jpg'
-#image_2 = 'photo_07005.jpg'
+image_1 = 'photo_07004.jpg'
+image_2 = 'photo_07005.jpg'
 #speed = 11.527350516701844
+#new_speed = 9.7389745988263
 
 #image_1 = 'photo_07003.jpg'
 #image_2 = 'photo_07004.jpg'
@@ -220,28 +225,13 @@ image_2 = 'photo_07465.jpg'
 #image_2 = 'photo_00155.jpg'
 #speed = 11.315244704839845 
 
-#image_1 = 'photo_07464.jpg'
-#image_2 = 'photo_07465.jpg'
-#speed = 7.255443210895204
-
-
-
-print(get_time_difference(image_1, image_2)) #get time difference between images
-image_1_cv, image_2_cv =convert_to_cv(image_1, image_2) #create opencfv images objects
-keypoints_1, keypoints_2, descriptors_1, descriptors_2 = calculate_features(image_1_cv, image_2_cv, 1000) #get keypoints and descriptors
-matches=calculate_matches(descriptors_1, descriptors_2) #match descriptors
-coordinates_1, coordinates_2 = find_matching_coordinates(keypoints_1, keypoints_2, matches)
-print(calculate_mean_distance(coordinates_1, coordinates_2))
-average_feature_distance = calculate_mean_distance(coordinates_1, coordinates_2)
-time_difference = get_time_difference(image_1, image_2)
-print(calculate_speed_in_kmps(average_feature_distance, 12648, time_difference))
 
 
 time_difference = get_time_difference(image_1, image_2) #get time difference between images
 image_1_cv, image_2_cv = convert_to_cv(image_1, image_2) #create opencfv images objects
 keypoints_1, keypoints_2, descriptors_1, descriptors_2 = calculate_features(image_1_cv, image_2_cv, 1000) #get keypoints and descriptors
 matches = calculate_matches(descriptors_1, descriptors_2) #match descriptors
-display_matches(image_1_cv, keypoints_1, image_2_cv, keypoints_2, matches) #display matches
+#display_matches(image_1_cv, keypoints_1, image_2_cv, keypoints_2, matches) #display matches
 coordinates_1, coordinates_2 = find_matching_coordinates(keypoints_1, keypoints_2, matches)
 average_feature_distance = calculate_mean_distance(coordinates_1, coordinates_2)
 speed = calculate_speed_in_kmps(average_feature_distance, 12648, time_difference)
@@ -254,6 +244,7 @@ speed = calculate_speed_in_kmps(average_feature_distance, 12648, time_difference
 
 
 print(str(len(validated_coordinates_1)) + "/"+str(len(coordinates_1))+" coordinates validated. New speed: " + str(speed))
+
 
 # uhhhhhhhhhhhhhhhhhhhhh.....
 
