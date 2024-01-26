@@ -6,6 +6,9 @@ import math
 import time
 from PIL import Image as pilimg
 
+while True:
+    print("git gud")
+
 start_time = time.time()
 def get_time(image):
     with open(image, 'rb') as image_file: # open the image
