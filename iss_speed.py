@@ -10,6 +10,9 @@ image_1 = 'photo_0684.jpg'
 image_2 = 'photo_0685.jpg'
 
 #function I made to take the pictures which I havent tested and probably should including some code I borrowed
+#  no arguments?
+#  camera.capture taking argument as a string?
+#
 #  def take_pictures(photos):
 #     camera = PiCamera()
 #     baseFolder = Path(__file__).parent.resolve()
