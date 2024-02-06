@@ -11,9 +11,10 @@ image_2 = 'photo_0685.jpg'
 
 #function I made to take the pictures which I havent tested and probably should including some code I borrowed
 #  no arguments?
-#  camera.capture taking argument as a string?
+#  camera.capture taking argument as a string? -you mean the f string?
 #
 #  def take_pictures(photos):
+      
 #     camera = PiCamera()
 #     baseFolder = Path(__file__).parent.resolve()
 #     imageDir = baseFolder / "images"
@@ -41,7 +42,7 @@ def get_time_difference(image_1, image_2): #gets the time difference
     return time_difference.seconds
 
 def convert_to_cv(image_1, image_2):#converts to cv (external python lib that uses NumPy and other stuff to do things with images)
-    image_1_cv = cv2.imread(image_1,cv2.IMREAD_GRAYSCALE) # idk what that does. <--
+    image_1_cv = cv2.imread(image_1,cv2.IMREAD_GRAYSCALE) # idk what that does. <-- it converts to greyscale so it can be analysed by the software easier
     image_2_cv = cv2.imread(image_2,cv2.IMREAD_GRAYSCALE)
     return image_1_cv, image_2_cv
     
