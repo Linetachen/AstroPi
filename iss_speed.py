@@ -1,3 +1,8 @@
+# Team: Piberry, Authors: Louise, 
+#For mission SpaceLab
+#Our code aims to use colour analysis to validate if the coordinates are actually matches
+#TO DO: make error code, get sensor input, possibly play around with the colours of the input images
+
 import os
 from exif import Image
 from datetime import datetime
