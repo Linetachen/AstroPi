@@ -49,7 +49,7 @@ def get_time(image): #opens the images and gets the time they were taken
     with open(image, 'rb') as image_file:
         img = Image(image_file)
         time_str = img.get("datetime_original")
-        time = datetime.strptime(time_str, %Y:%m:%d %H:%M:%S')
+        time = datetime.strptime(time_str,'%Y:%m:%d %H:%M:%S')
     return time
 
 def get_time_difference(image_1, image_2): #gets the time difference
