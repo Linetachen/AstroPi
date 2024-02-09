@@ -102,8 +102,13 @@ def calculate_mean_distance(coordinates_1, coordinates_2):#clue in name of funct
         y_difference = coordinate[0][1] - coordinate[1][1]
         distance = math.hypot(x_difference, y_difference)
         all_distances = all_distances + distance
-    return all_distances / len(merged_coordinates)
-    
+
+        if (len(merged_coordinates) == 0){
+            return 0
+        }
+        else{
+            return all_distances / len(merged_coordinates)
+        }
 def calculate_speed_in_kmps(feature_distance, GSD, time_difference):#self explanatory (I hope)
     distance = feature_distance * GSD 
     speed = distance / time_difference
