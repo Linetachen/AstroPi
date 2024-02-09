@@ -26,7 +26,6 @@ num = 0
 count = 0
 
 
-#function I made to take the pictures which I havent tested and probably should including some code I borrowed
 def take_pictures(photos):
     camera = PiCamera()
     imageDir = baseFolder / "images"
