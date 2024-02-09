@@ -26,16 +26,14 @@ num = 0
 count = 0
 
 
-def take_pictures(photos):
+def take_pictures(num_of_photos):
     camera = PiCamera()
     imageDir = baseFolder / "images"
     
-    camera.start_preview()
-    for i in range (photos):
+    for i in range (num_of_photos):
         time.sleep(5)
         camera.capture((imageDir / f'image_{i}.jpg'))
 
-    camera.stop_preview()
     camera.close()
 
 def giveResult(value):
@@ -142,13 +140,11 @@ with open(str(baseFolder / 'result.txt'), 'w') as file:
         file.write(f"Start time: {startTime.strftime('%Y-%m-%d %H:%M:%S')}")
 
 
+speedTotal = 0
+
 while (datetime.now() - startTime).total_seconds() < timeAllowed and imageCount <= numPhotos:
-    camera = PiCamera()
-    path = baseFolder / Path(f"./image{num}.jpg")
-    camera.capture(path)
-    num+=1
-    camera.close()
-    imageCount+=1
+    take_pictures(42)
+    #this does not fully work but you get the idea and i cba
     time.sleep(5)
     if num >= 2:
         image_1 = f'image{num-1}.jpg'
@@ -161,7 +157,7 @@ while (datetime.now() - startTime).total_seconds() < timeAllowed and imageCount 
         coordinates_1, coordinates_2 = find_matching_coordinates(keypoints_1, keypoints_2, matches)
         validated_coordinates_1, validated_coordinates_2 = validate_matching_coordinates(image_1, image_2, coordinates_1, coordinates_2, 50)
         average_feature_distance = calculate_mean_distance(coordinates_1, coordinates_2)
-        speedTotal = speed + calculate_speed_in_kmps(average_feature_distance, GSD, time_difference)
+        speedTotal += calculate_speed_in_kmps(average_feature_distance, GSD, time_difference)
         os.remove(f'image{num-1}.jpg')
         count+=1
 
