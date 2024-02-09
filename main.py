@@ -10,7 +10,6 @@ import cv2
 import math
 import time
 from time import sleep
-from PIL import Image as pilimg
 from PIL import *
 from pathlib import Path
 from picamera import PiCamera
@@ -25,18 +24,6 @@ imageCount = 0
 num = 0
 count = 0
 
-
-def take_pictures(photos):
-    camera = PiCamera()
-    imageDir = baseFolder / "images"
-    
-    camera.start_preview()
-    for i in range (photos):
-        time.sleep(5)
-        camera.capture((imageDir / f'image_{i}.jpg'))
-
-    camera.stop_preview()
-    camera.close()
 
 def giveResult(value):
     with open(str(baseFolder / 'result.txt'), 'w') as file:
@@ -143,10 +130,10 @@ with open(str(baseFolder / 'result.txt'), 'w') as file:
 
 
 while (datetime.now() - startTime).total_seconds() < timeAllowed and imageCount <= numPhotos:
+    num+=1
     camera = PiCamera()
     path = baseFolder / Path(f"./image{num}.jpg")
-    camera.capture(path)
-    num+=1
+    camera.capture(str(path))
     camera.close()
     imageCount+=1
     time.sleep(5)
@@ -161,7 +148,7 @@ while (datetime.now() - startTime).total_seconds() < timeAllowed and imageCount 
         coordinates_1, coordinates_2 = find_matching_coordinates(keypoints_1, keypoints_2, matches)
         validated_coordinates_1, validated_coordinates_2 = validate_matching_coordinates(image_1, image_2, coordinates_1, coordinates_2, 50)
         average_feature_distance = calculate_mean_distance(coordinates_1, coordinates_2)
-        speedTotal = speed + calculate_speed_in_kmps(average_feature_distance, GSD, time_difference)
+        speedTotal = speedTotal + calculate_speed_in_kmps(average_feature_distance, GSD, time_difference)
         os.remove(f'image{num-1}.jpg')
         count+=1
 
