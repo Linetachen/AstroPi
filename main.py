@@ -41,14 +41,14 @@ def take_pictures(photos):
 def giveResult(value):
     with open(str(baseFolder / 'result.txt'), 'w') as file:
         file.write(f'speed = {value}')
-        file.write(f'End time: {endTime.strftime('%Y-%m-%d %H:%M:%S')}') #no clue why theres an error here
+        file.write(f"End time: {endTime.strftime('%Y-%m-%d %H:%M:%S')}") #no clue why theres an error here
 
 
 def get_time(image): #opens the images and gets the time they were taken
     with open(image, 'rb') as image_file:
         img = Image(image_file)
         time_str = img.get("datetime_original")
-        time = datetime.strptime(time_str, '%Y:%m:%d %H:%M:%S')
+        time = datetime.strptime(time_str,'%Y:%m:%d %H:%M:%S')
     return time
 
 def get_time_difference(image_1, image_2): #gets the time difference
@@ -101,8 +101,13 @@ def calculate_mean_distance(coordinates_1, coordinates_2):#clue in name of funct
         y_difference = coordinate[0][1] - coordinate[1][1]
         distance = math.hypot(x_difference, y_difference)
         all_distances = all_distances + distance
-    return all_distances / len(merged_coordinates)
-    
+
+        if (len(merged_coordinates) == 0){
+            return 0
+        }
+        else{
+            return all_distances / len(merged_coordinates)
+        }
 def calculate_speed_in_kmps(feature_distance, GSD, time_difference):#self explanatory (I hope)
     distance = feature_distance * GSD 
     speed = distance / time_difference
@@ -134,7 +139,7 @@ def validate_matching_coordinates(image_1, image_2, coordinates_1, coordinates_2
 #main code
 startTime = datetime.now()
 with open(str(baseFolder / 'result.txt'), 'w') as file:
-        file.write(f'Start time: {startTime.strftime('%Y-%m-%d %H:%M:%S')}')
+        file.write(f"Start time: {startTime.strftime('%Y-%m-%d %H:%M:%S')}")
 
 
 while (datetime.now() - startTime).total_seconds() < timeAllowed and imageCount <= numPhotos:
