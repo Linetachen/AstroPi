@@ -16,27 +16,27 @@ from picamera import PiCamera
 from datetime import datetime
 
 GSD = 0.1243 #for 5mm lens
-numPhotos = 42
-baseFolder = (Path(__file__).parent).resolve()
-timeAllowed = 570 #9m30s
+baseFolder = os.getcwd()
+print(baseFolder)
+timeAllowed = 570 #9m30sre(str(path))
 startTime = None
 imageCount = 0
 num = 0
 count = 0
 
 
-def take_pictures(num_of_photos):
+def take_pictures(n):
     camera = PiCamera()
-    imageDir = baseFolder / "images"
+    imageDir = baseFolder +"/images"
     
-    for i in range (num_of_photos):
+    for i in range(2):
         time.sleep(5)
-        camera.capture((imageDir / f'image_{i}.jpg'))
+        camera.capture((imageDir + f'/image_{n+i}.jpg'))
 
     camera.close()
 
 def giveResult(value):
-    with open(str(baseFolder / 'result.txt'), 'w') as file:
+    with open(str(baseFolder + '/result.txt'), 'w') as file:
         file.write(f'speed = {value}')
         file.write(f"End time: {endTime.strftime('%Y-%m-%d %H:%M:%S')}") #no clue why theres an error here
 
@@ -135,24 +135,18 @@ def validate_matching_coordinates(image_1, image_2, coordinates_1, coordinates_2
 
 #main code
 startTime = datetime.now()
-with open(str(baseFolder / 'result.txt'), 'w') as file:
+with open(str(baseFolder + '/result.txt'), 'w') as file:
         file.write(f"Start time: {startTime.strftime('%Y-%m-%d %H:%M:%S')}")
 
 
 speedTotal = 0
+num=0
+while (datetime.now() - startTime).total_seconds() < timeAllowed and num <= 42:
 
-while (datetime.now() - startTime).total_seconds() < timeAllowed and imageCount <= numPhotos:
-
-    take_pictures(42)
+    take_pictures(num)
     #this does not fully work but you get the idea 
 
-    num+=1
-    camera = PiCamera()
-    path = baseFolder / Path(f"./image{num}.jpg")
-    camera.capture(str(path))
-    camera.close()
-    imageCount+=1
-    time.sleep(5)
+    num+=2
     if num >= 2:
         image_1 = f'image{num-1}.jpg'
         image_2 = f'image{num}.jpg'
@@ -165,8 +159,7 @@ while (datetime.now() - startTime).total_seconds() < timeAllowed and imageCount 
         validated_coordinates_1, validated_coordinates_2 = validate_matching_coordinates(image_1, image_2, coordinates_1, coordinates_2, 50)
         average_feature_distance = calculate_mean_distance(coordinates_1, coordinates_2)
         speedTotal += calculate_speed_in_kmps(average_feature_distance, GSD, time_difference)
-        os.remove(f'image{num-1}.jpg')
-        count+=1
+
 
 endTime = datetime.now()
 giveResult(speedTotal/count)
