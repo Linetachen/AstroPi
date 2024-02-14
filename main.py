@@ -1,167 +1,108 @@
-# Team: Piberry, Authors: Louise, 
-#For mission SpaceLab
-#Our code aims to use colour analysis to validate if the coordinates are actually matches
-#TO DO: make error code, get sensor input, test on the actual pi, possibly play around with the colours of the input images
+# Team: Piberry, Authors: Erik, ...
+# TODO: Save images and sensor data using the sense_hat module. Unnecessary, but important for the analysis afterwards.
 
-import os
-from exif import Image
-from datetime import datetime
-import cv2
-import math
-import time
+from temp.d_picamera import PiCamera
 from time import sleep
-from PIL import *
-from pathlib import Path
-from picamera import PiCamera
 from datetime import datetime
+from pathlib import Path
+from logzero import logger, logfile
+from exif import Image
+import numpy as np
+import cv2
+import os
 
-GSD = 0.1243 #for 5mm lens
-baseFolder = os.getcwd()
-print(baseFolder)
-timeAllowed = 570 #9m30sre(str(path))
-startTime = None
-imageCount = 0
-num = 0
-count = 0
+# constants
+ROOT_FOLDER = (Path(__file__).parent).resolve()
+LOG_FILE = ROOT_FOLDER / "AstroPi.log"
+RESOLUTION = (4056, 3040) # resolution of the Pi camera
+CALCULATION_TIME = 570 #seconds, time allowed for speed calculation
+GSD = 0.1243 # Ground Sampling Distance, km per pixel
+INTERVAL = 2 #seconds
 
+def getTime(imagePath):
+    """Get the time the image was taken from the exif data of the image."""
+    with open(imagePath, 'rb') as imageFile:
+        image = Image(imageFile)
+        return datetime.strptime(image.datetime, "%Y:%m:%d %H:%M:%S")
 
-def take_pictures(n):
+def distanceFromMatches(matches, kp1, kp2):
+    """Calculate the pixel distance between the matched keypoints in the two images."""
+    return np.mean([np.hypot(kp1[match.queryIdx].pt[0]-kp2[match.trainIdx].pt[0], kp1[match.queryIdx].pt[1]-kp2[match.trainIdx].pt[1]) for match in matches])
+
+def getMatchesAndKeyPoints(image1, image2):
+    """Get the matches and keypoints of the two images using Open CV."""
+    orb = cv2.ORB_create()
+    kp1, desc1 = orb.detectAndCompute(image1, None)
+    kp2, desc2 = orb.detectAndCompute(image2, None)
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+    return bf.match(desc1,desc2), kp1, kp2
+
+def writeMeanSpeed(meanSpeed):
+    """Write the mean speed to a file, to 6 characters."""
+    with open(str(ROOT_FOLDER / "result.txt"), "w") as speedFile:
+        speed = str(meanSpeed)
+        speed = speed[:min(len(speed),6)]
+        speedFile.write(speed)
+
+def main():    
+    # setup camera
     camera = PiCamera()
-    imageDir = baseFolder +"/images"
-    
-    for i in range(2):
-        time.sleep(5)
-        camera.capture((imageDir + f'/image_{n+i}.jpg'))
+    camera.resolution = RESOLUTION
+
+    imagePaths = [] # list of captured image paths
+    meanSpeed = 0 # mean calculated speed
+    speedCalcCounter = 0 # number of speeds calculated
+
+    # capture images and calculate speed within the runtime
+    while (datetime.now() - startTime).total_seconds() < CALCULATION_TIME:
+        # capture image
+        currentImagePath = ROOT_FOLDER / f"image{len(imagePaths)}.jpg"
+        camera.capture(str(currentImagePath))
+        imagePaths.append(currentImagePath)
+
+        # calculate speed if there are at least two images
+        if len(imagePaths) > 2:
+            # consider last two images for speed calculation
+            oldStrPath = str(imagePaths[-2])
+            oldImage = cv2.imread(oldStrPath)
+            oldImageTime = getTime(oldStrPath)
+            newStrPath = str(imagePaths[-1])
+            newImage = cv2.imread(newStrPath)
+            newImageTime = getTime(newStrPath)
+            timeDelta = (newImageTime - oldImageTime).total_seconds()
+
+            # compute matches and keypoints using cv2
+            matches, kp1, kp2 = getMatchesAndKeyPoints(oldImage, newImage)
+
+            # calculate speed if there are matches
+            if len(matches) > 0:
+                speed = distanceFromMatches(matches, kp1, kp2)*GSD/timeDelta
+                meanSpeed = (meanSpeed*speedCalcCounter + speed)/(speedCalcCounter+1)
+                speedCalcCounter += 1
+                logger.info(f"Speed: {speed} km/s, Mean speed: {meanSpeed} km/s")
+        sleep(INTERVAL) # wait before taking next image
 
     camera.close()
 
-def giveResult(value):
-    with open(str(baseFolder + '/result.txt'), 'w') as file:
-        file.write(f'speed = {value}')
-        file.write(f"End time: {endTime.strftime('%Y-%m-%d %H:%M:%S')}") #no clue why theres an error here
+    # delete images
+    for image in imagePaths:
+        os.remove(image)
+
+    # write mean speed to file
+    writeMeanSpeed(meanSpeed)
+
+# entry point
+if __name__ == "__main__":
+    startTime = datetime.now()
+    logfile(str(LOG_FILE))
+
+    try:
+        main()
+    except Exception as e:
+        logger.error(e)
+        # raise e # uncomment to rethrow the exception. Useful when debugging.
+    finally:
+        logger.info("Program ended.")
 
 
-def get_time(image): #opens the images and gets the time they were taken
-    with open(image, 'rb') as image_file:
-        img = Image(image_file)
-        time_str = img.get("datetime_original")
-        time = datetime.strptime(time_str,'%Y:%m:%d %H:%M:%S')
-    return time
-
-def get_time_difference(image_1, image_2): #gets the time difference
-    time_1 = get_time(image_1)
-    time_2 = get_time(image_2)
-    time_difference = time_2 - time_1
-    return time_difference.seconds
-
-def convert_to_cv(image_1, image_2):#converts to cv (external python lib that uses NumPy and other stuff to do things with images)
-    image_1_cv = cv2.imread(image_1,cv2.IMREAD_GRAYSCALE) # idk what that does. <--
-    image_2_cv = cv2.imread(image_2,cv2.IMREAD_GRAYSCALE)
-    return image_1_cv, image_2_cv
     
-def calculate_features(image_1, image_2, feature_number):#uses ORB which is a complicated object detection software within opencv
-    orb = cv2.ORB_create(nfeatures = feature_number)
-    keypoints_1, descriptors_1 = orb.detectAndCompute(image_1_cv, None)
-    keypoints_2, descriptors_2 = orb.detectAndCompute(image_2_cv, None)
-    return keypoints_1, keypoints_2, descriptors_1, descriptors_2
-
-def calculate_matches(descriptors_1, descriptors_2):#calculates the matches between the two images
-    brute_force = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-    matches = brute_force.match(descriptors_1, descriptors_2)
-    matches = sorted(matches, key=lambda x: x.distance)
-    return matches
-
-def display_matches(image_1_cv, keypoints_1, image_2_cv, keypoints_2, matches):#clue in name of func- comment out destroy window line to see how it works 
-    match_img = cv2.drawMatches(image_1_cv, keypoints_1, image_2_cv, keypoints_2, matches[:100], None)
-    resize = cv2.resize(match_img, (1600,600), interpolation = cv2.INTER_AREA)
-    cv2.imshow('matches', resize)
-    cv2.waitKey(0)
-    #cv2.destroyWindow('matches')
-    
-def find_matching_coordinates(keypoints_1, keypoints_2, matches):#finds the matching coordinates
-    coordinates_1 = []
-    coordinates_2 = []
-    for match in matches:
-        image_1_idx = match.queryIdx
-        image_2_idx = match.trainIdx
-        (x1,y1) = keypoints_1[image_1_idx].pt
-        (x2,y2) = keypoints_2[image_2_idx].pt
-        coordinates_1.append((x1,y1))
-        coordinates_2.append((x2,y2))
-    return coordinates_1, coordinates_2
-
-def calculate_mean_distance(coordinates_1, coordinates_2):#clue in name of function
-    all_distances = 0
-    merged_coordinates = list(zip(coordinates_1, coordinates_2))
-    for coordinate in merged_coordinates:
-        x_difference = coordinate[0][0] - coordinate[1][0]
-        y_difference = coordinate[0][1] - coordinate[1][1]
-        distance = math.hypot(x_difference, y_difference)
-        all_distances = all_distances + distance
-
-        if (len(merged_coordinates) == 0):
-            return 0
-        
-        else:
-            return all_distances / len(merged_coordinates)
-        
-def calculate_speed_in_kmps(feature_distance, GSD, time_difference):#self explanatory (I hope)
-    distance = feature_distance * GSD 
-    speed = distance / time_difference
-    return speed
-
-def validate_matching_coordinates(image_1, image_2, coordinates_1, coordinates_2, sensitivity):
-    img1 = pilimg.open(image_1)
-    img2 = pilimg.open(image_2)
-
-    res_1 = []
-    res_2 = []
-    
-    diff_thr = sensitivity
-    for i in range(len(coordinates_1)):
-        c_1 = img1.getpixel((coordinates_1[i][0],coordinates_1[i][1]))
-        c_2 = img2.getpixel((coordinates_2[i][0],coordinates_2[i][1]))
-        
-        diff = 0
-        for j in range(3):
-            diff += abs(c_1[j]-c_2[j])
-        
-        if(diff <= diff_thr):
-            res_1.append(coordinates_1[i])
-            res_2.append(coordinates_2[i])
-    return res_1, res_2
-
-
-
-#main code
-startTime = datetime.now()
-with open(str(baseFolder + '/result.txt'), 'w') as file:
-        file.write(f"Start time: {startTime.strftime('%Y-%m-%d %H:%M:%S')}")
-
-
-speedTotal = 0
-num=0
-while (datetime.now() - startTime).total_seconds() < timeAllowed and num <= 42:
-
-    take_pictures(num)
-    #this does not fully work but you get the idea 
-
-    num+=2
-    if num >= 2:
-        image_1 = f'image{num-1}.jpg'
-        image_2 = f'image{num}.jpg'
-        time_difference = get_time_difference(image_1, image_2) # Get time difference between images
-        image_1_cv, image_2_cv = convert_to_cv(image_1, image_2) # Create OpenCV image objects
-        keypoints_1, keypoints_2, descriptors_1, descriptors_2 = calculate_features(image_1_cv, image_2_cv, 1000) # Get keypoints and descriptors
-        matches = calculate_matches(descriptors_1, descriptors_2) # Match descriptors
-        #display_matches(image_1_cv, keypoints_1, image_2_cv, keypoints_2, matches) # Display matches
-        coordinates_1, coordinates_2 = find_matching_coordinates(keypoints_1, keypoints_2, matches)
-        validated_coordinates_1, validated_coordinates_2 = validate_matching_coordinates(image_1, image_2, coordinates_1, coordinates_2, 50)
-        average_feature_distance = calculate_mean_distance(coordinates_1, coordinates_2)
-        speedTotal += calculate_speed_in_kmps(average_feature_distance, GSD, time_difference)
-
-
-endTime = datetime.now()
-giveResult(speedTotal/count)
-
-        
