@@ -23,6 +23,7 @@ startTime = None
 imageCount = 0
 num = 0
 count = 0
+speedTotal = 0
 
 
 def giveResult(value):
