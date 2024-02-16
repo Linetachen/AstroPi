@@ -58,7 +58,7 @@ def dump_sensor_data(directory):
         file.write(HEADER + '\n')
         sense_hat = SenseHat()
 
-        while True:
+        for i in range (IMAGE_LIMIT):
             record_sensor_data(sense_hat, file)
             # Assuming path is the path to an image
             # copy_image(path, dump_folder)
