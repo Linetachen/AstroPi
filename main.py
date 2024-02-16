@@ -1,7 +1,7 @@
 # Team: Piberry, Authors: Erik, ...
-# TODO: Save images and sensor data using the sense_hat module. Unnecessary, but important for the analysis afterwards.
 
-from temp.d_picamera import PiCamera
+from picamera import PiCamera
+from sense_hat import SenseHat
 from time import sleep
 from datetime import datetime
 from pathlib import Path
@@ -10,6 +10,7 @@ from exif import Image
 import numpy as np
 import cv2
 import os
+import shutil
 
 # constants
 ROOT_FOLDER = (Path(__file__).parent).resolve()
@@ -44,7 +45,24 @@ def writeMeanSpeed(meanSpeed):
         speed = speed[:min(len(speed),6)]
         speedFile.write(speed)
 
-def main():    
+def logSensorData(senseHat):
+    """Log the sensor data to the log file."""
+    # get sensor data
+    orientation = senseHat.get_orientation()
+    compassNorth = senseHat.get_compass()
+    magnetometer = senseHat.get_compass_raw()
+    gyroscope = senseHat.get_gyroscope_raw()
+    accelerometer = senseHat.get_accelerometer_raw()
+    humidity = senseHat.get_humidity()
+    temperature = senseHat.get_temperature()
+    pressure = senseHat.get_pressure()
+    # log data
+    logger.info(f"Data:{datetime.now().strftime('%Y-%m-%d %H:%M:%S:%f')},{orientation['yaw']},{orientation['pitch']},{orientation['roll']},{compassNorth},{magnetometer['x']},{magnetometer['y']},{magnetometer['z']},{gyroscope['x']},{gyroscope['y']},{gyroscope['z']},{accelerometer['x']},{accelerometer['y']},{accelerometer['z']},{humidity},{temperature},{pressure}")
+
+def main():
+    # sense
+    senseHat = SenseHat()
+
     # setup camera
     camera = PiCamera()
     camera.resolution = RESOLUTION
@@ -55,38 +73,45 @@ def main():
 
     # capture images and calculate speed within the runtime
     while (datetime.now() - startTime).total_seconds() < CALCULATION_TIME:
-        # capture image
-        currentImagePath = ROOT_FOLDER / f"image{len(imagePaths)}.jpg"
-        camera.capture(str(currentImagePath))
-        imagePaths.append(currentImagePath)
+        try:
+            # log sensor data
+            logSensorData(senseHat)
+            # capture image
+            currentImagePath = ROOT_FOLDER / f"image{len(imagePaths)}.jpg"
+            camera.capture(str(currentImagePath))
+            imagePaths.append(currentImagePath)
 
-        # calculate speed if there are at least two images
-        if len(imagePaths) > 2:
-            # consider last two images for speed calculation
-            oldStrPath = str(imagePaths[-2])
-            oldImage = cv2.imread(oldStrPath)
-            oldImageTime = getTime(oldStrPath)
-            newStrPath = str(imagePaths[-1])
-            newImage = cv2.imread(newStrPath)
-            newImageTime = getTime(newStrPath)
-            timeDelta = (newImageTime - oldImageTime).total_seconds()
+            # calculate speed if there are at least two images
+            if len(imagePaths) > 2:
+                # consider last two images for speed calculation
+                oldStrPath = str(imagePaths[-2])
+                oldImage = cv2.imread(oldStrPath)
+                oldImageTime = getTime(oldStrPath)
+                newStrPath = str(imagePaths[-1])
+                newImage = cv2.imread(newStrPath)
+                newImageTime = getTime(newStrPath)
+                timeDelta = (newImageTime - oldImageTime).total_seconds()
 
-            # compute matches and keypoints using cv2
-            matches, kp1, kp2 = getMatchesAndKeyPoints(oldImage, newImage)
+                # compute matches and keypoints using cv2
+                matches, kp1, kp2 = getMatchesAndKeyPoints(oldImage, newImage)
 
-            # calculate speed if there are matches
-            if len(matches) > 0:
-                speed = distanceFromMatches(matches, kp1, kp2)*GSD/timeDelta
-                meanSpeed = (meanSpeed*speedCalcCounter + speed)/(speedCalcCounter+1)
-                speedCalcCounter += 1
-                logger.info(f"Speed: {speed} km/s, Mean speed: {meanSpeed} km/s")
+                # calculate speed if there are matches
+                if len(matches) > 0:
+                    speed = distanceFromMatches(matches, kp1, kp2)*GSD/timeDelta
+                    meanSpeed = (meanSpeed*speedCalcCounter + speed)/(speedCalcCounter+1)
+                    speedCalcCounter += 1
+                    logger.info(f"Speed: {speed} km/s, Mean speed: {meanSpeed} km/s")
+        except Exception as e:
+            logger.error(e)
         sleep(INTERVAL) # wait before taking next image
 
     camera.close()
 
     # delete images
-    for image in imagePaths:
-        os.remove(image)
+    imageKeepInterval = np.ceil(len(imagePaths)/40)
+    for i in range(len(imagePaths)):
+        if i % imageKeepInterval != 0:
+            os.remove(str(imagePaths[i]))        
 
     # write mean speed to file
     writeMeanSpeed(meanSpeed)
